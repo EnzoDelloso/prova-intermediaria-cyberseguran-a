@@ -1,0 +1,43 @@
+{
+  "manifest_version": 2,
+  "name": "Privacy Tracker Detector",
+  "version": "1.0.0",
+  "description": "Detecta e apresenta rastreadores de terceiros, cookies, uso de armazenamento HTML5, cookie sync/bounce tracking, canvas fingerprinting e indícios de sequestro de navegador. Calcula uma pontuação de privacidade por página.",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "privacy-tracker-detector@insper.local",
+      "strict_min_version": "78.0"
+    }
+  },
+  "permissions": [
+    "webRequest",
+    "webRequestBlocking",
+    "webNavigation",
+    "cookies",
+    "storage",
+    "tabs",
+    "<all_urls>"
+  ],
+  "background": {
+    "scripts": ["blocklist.js", "background.js"]
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content_script.js"],
+      "run_at": "document_start",
+      "all_frames": true
+    }
+  ],
+  "web_accessible_resources": ["inject.js"],
+  "browser_action": {
+    "default_popup": "popup.html",
+    "default_title": "Privacy Tracker Detector",
+    "default_icon": {
+      "48": "icons/icon48.png"
+    }
+  },
+  "icons": {
+    "48": "icons/icon48.png"
+  }
+}
