@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Privacy Tracker Detector",
-  "version": "1.0.0",
+  "version": "1.3.0",
   "description": "Detecta e apresenta rastreadores de terceiros, cookies, uso de armazenamento HTML5, cookie sync/bounce tracking, canvas fingerprinting e indícios de sequestro de navegador. Calcula uma pontuação de privacidade por página.",
   "browser_specific_settings": {
     "gecko": {

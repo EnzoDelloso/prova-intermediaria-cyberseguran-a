@@ -1,69 +1,175 @@
 # Privacy Tracker Detector
 
-Extensão para Firefox que detecta e apresenta, por página:
+Extensão acadêmica para Firefox desenvolvida para a Avaliação Intermediária de
+Cibersegurança do Insper. O plugin monitora indicadores de rastreamento e
+privacidade da página ativa, apresenta um relatório por site e permite bloquear
+domínios definidos pelo usuário.
 
-- Conexões a domínios de terceira parte;
-- Cookies (1ª/3ª parte, sessão/persistente);
-- Armazenamento HTML5 (localStorage, sessionStorage, IndexedDB);
-- Cookie sync / bounce tracking;
-- Canvas fingerprinting;
-- Indícios de sequestro de navegador (hijacking/hook);
-- Pontuação de privacidade da página, com metodologia explícita (ver `background.js`, seção "Cálculo da pontuação de privacidade");
-- Lista de bloqueio personalizada (bloqueia domínios via `webRequest`).
+## Funcionalidades
 
-## Instalação (teste local, via about:debugging)
+- Identificação de conexões com domínios de terceiros;
+- Contagem de cookies de primeira e terceira parte, separados entre cookies de
+  sessão e persistentes;
+- Monitoramento de escritas em `localStorage` e `sessionStorage` e de aberturas
+  de bancos `IndexedDB`;
+- Detecção de uso de canvas associado a fingerprinting;
+- Detecção heurística de cookie sync e parâmetros de rastreamento;
+- Identificação de cadeias compatíveis com bounce tracking;
+- Identificação de possíveis indicadores de hijacking/hook;
+- Pontuação de privacidade calculada por página;
+- Lista de bloqueio personalizada, aplicada por meio da API `webRequest`.
 
-1. Abra o Firefox e acesse `about:debugging#/runtime/this-firefox`.
-2. Clique em **"Carregar extensão temporária..."**.
-3. Selecione o arquivo `manifest.json` dentro desta pasta.
-4. A extensão aparecerá na barra de ferramentas (ícone verde). Abra qualquer site e clique no ícone para ver o relatório da aba ativa.
+## Instalação no Firefox
 
-Observação: extensões carregadas assim são removidas ao fechar o Firefox; para reinstalar, repita o passo 2/3.
+1. Baixe ou clone este repositório.
+2. Abra o Firefox e acesse `about:debugging#/runtime/this-firefox`.
+3. Clique em **Carregar extensão temporária...**.
+4. Selecione o arquivo `privacy-extension/manifest.json`.
+5. Confirme que a extensão **Privacy Tracker Detector**, versão 1.3.0, aparece
+   na lista.
+6. Abra o site que deseja analisar, recarregue a página e clique no ícone da
+   extensão.
 
-## Estrutura do código
+> Extensões temporárias são removidas quando o Firefox é fechado. Nesse caso,
+> repita o carregamento pelo `about:debugging`.
 
-| Arquivo | Papel |
+## Uso
+
+O popup apresenta apenas os dados da aba ativa. Para iniciar uma medição limpa:
+
+1. Abra a página desejada;
+2. Recarregue a página após carregar a extensão;
+3. Aguarde o carregamento e as interações necessárias;
+4. Abra o popup para consultar o relatório.
+
+Na lista de bloqueio, informe somente o domínio, por exemplo
+`bad.third-party.site`, e recarregue a página. O botão **×** remove o domínio da
+lista.
+
+## Metodologia da pontuação
+
+Cada página começa com 100 pontos. As penalidades abaixo são subtraídas conforme
+os eventos observados:
+
+| Indicador | Penalidade |
+|---|---:|
+| Cada domínio de terceiro | −3 pontos |
+| Cada cookie de terceiro de sessão | −1 ponto |
+| Cada cookie de terceiro persistente | −4 pontos |
+| Uso de canvas para fingerprinting | −15 pontos |
+| Cada ocorrência de bounce tracking | −5 pontos |
+| Cada ocorrência de cookie sync | −8 pontos |
+| Cada abertura de IndexedDB | −2 pontos |
+| Cada indício de hijacking/hook | −10 pontos |
+
+O resultado é arredondado e limitado ao intervalo de 0 a 100. A interface usa
+as seguintes faixas:
+
+- **70 a 100:** boa privacidade (verde);
+- **40 a 69:** privacidade intermediária (amarelo);
+- **0 a 39:** baixa privacidade (vermelho).
+
+Essa pontuação é uma métrica autoral do projeto. Ela não equivale à metodologia
+do Blacklight e deve ser comparada com outras ferramentas de forma qualitativa,
+considerando o que cada uma mede.
+
+## Estrutura do projeto
+
+| Arquivo ou diretório | Responsabilidade |
 |---|---|
-| `manifest.json` | Declaração da extensão e permissões |
-| `background.js` | Estado por aba, classificação de requisições/cookies, bounce tracking, cookie sync, score, API para o popup |
-| `blocklist.js` | Persistência da lista de bloqueio customizada |
-| `content_script.js` | Ponte entre a página (isolated world) e o background |
-| `inject.js` | Roda no **main world** da página; hookeia `canvas`, `localStorage`/`sessionStorage`, `IndexedDB`, `WebSocket`, `setInterval` e detecta adulteração de globais |
-| `popup.html` / `popup.js` | Interface: relatório por página + gestão da blocklist |
+| `manifest.json` | Metadados, permissões e componentes da extensão |
+| `background.js` | Estado por aba, requisições, cookies, detecções e cálculo do score |
+| `blocklist.js` | Persistência e consulta da lista de bloqueio |
+| `content_script.js` | Comunicação entre a página e o background |
+| `inject.js` | Instrumentação das APIs no contexto principal da página |
+| `popup.html` / `popup.js` | Interface e apresentação do relatório |
+| `evidencias/` | Prints, HARs e registros usados na avaliação |
 
-## Como testar nas DuckDuckGo Privacy Test Pages (entregável 2)
+## Validação com DuckDuckGo Privacy Test Pages
 
-Repositório de referência: `https://github.com/duckduckgo/privacy-test-pages`. Pode ser clonado e servido localmente (`python3 -m http.server`) ou acessado pela versão hospedada, se disponível.
+Os testes foram baseados no projeto
+[DuckDuckGo Privacy Test Pages](https://github.com/duckduckgo/privacy-test-pages):
 
-Páginas relevantes e o que checar no popup:
+| Teste | Indicador observado no plugin |
+|---|---|
+| Tracker Reporting | Domínios de terceiros |
+| Tracker Blocking | Bloqueio de `bad.third-party.site` |
+| Storage Blocking | `localStorage`, `sessionStorage` e `IndexedDB` |
+| Storage Partitioning | Atividade de armazenamento por contexto/frame |
+| Canvas Fingerprinting | Campo **Canvas fingerprint** |
+| Bounce Tracking | Campo **Bounce tracking** |
+| Query Parameters | Campo **Cookie sync** |
+| JS Leaks | Campo **Indícios de hijacking/hook** |
 
-1. **Tracker Reporting** → conferir contagem em "Domínios de terceira parte".
-2. **Storage blocking** → conferir `localStorage`/`sessionStorage`/`IndexedDB`.
-3. **Fingerprinting / canvas** → conferir "Canvas fingerprint = Sim".
-4. **Tracker Blocking** → adicionar o domínio de teste à blocklist customizada e confirmar que a requisição é cancelada (aparecerá em `tab.blockedRequests`, visível no console de background via `about:debugging` → "Inspecionar").
-5. **Storage partitioning** → comparar contagens de storage por frame/origem.
-6. **Bounce tracking** → observar `bounceTracking` no relatório.
-7. **Query parameters (cookie sync)** → observar `cookieSync`.
-8. **js-leaks** → observar `hijackIndicators` (adulteração de globais / polling).
+Essas páginas dependem de domínios locais e Service Workers. Portanto, devem ser
+executadas conforme as instruções do repositório oficial, incluindo a
+configuração do arquivo `hosts` e do servidor recomendado. Servir os arquivos
+somente com `python -m http.server` pode gerar respostas 404 e resultados
+inválidos, principalmente em Storage Blocking.
 
-Para o relatório exigido (tabela teste × esperado × obtido × explicação), monte uma tabela manualmente comparando o que a própria página DDG reporta como esperado com o que aparece no popup, e tire prints do popup aberto sobre cada página de teste (guarde em `evidencias/`).
+O plugin mede o uso das APIs, mas não substitui o veredito da página de teste.
+Por exemplo, Storage Partitioning avalia isolamento entre origens, enquanto o
+plugin registra operações de armazenamento. Divergências desse tipo são
+esperadas e precisam ser interpretadas no relatório.
 
-## Como testar em sites reais (entregável 3)
 
-Para cada um dos 3 sites sorteados:
+## Avaliação em sites reais
 
-1. Abra o DevTools → aba Network → grave a navegação → exporte como `.har` (botão direito → "Save all as HAR").
-2. Rode o [Blacklight (The Markup)](https://themarkup.org/blacklight) para o mesmo site.
-3. Instale o [uBlock Origin](https://github.com/gorhill/uBlock) e veja o que ele bloqueia na mesma navegação.
-4. Compare os três relatórios (plugin, Blacklight, uBlock) e documente divergências citando o tráfego específico do HAR (nome do domínio, tipo de recurso, cookie).
+Foram analisados G1, Stack Overflow e GitHub usando quatro fontes:
 
-## Limitações conhecidas (documentar no relatório)
+1. Relatório do Privacy Tracker Detector;
+2. Tráfego exportado pelo DevTools em formato HAR;
+3. Resultado do Blacklight;
+4. Bloqueios observados no uBlock Origin e em seu logger.
 
-- `baseDomain()` usa uma lista fixa de sufixos públicos comuns (`com.br`, `co.uk`, etc.) em vez de uma Public Suffix List completa — pode classificar incorretamente domínios com sufixos incomuns.
-- A detecção de hijacking é heurística (WebSocket para terceiro, polling curto, adulteração de globais) e pode gerar falsos positivos/negativos; não é uma prova formal de comprometimento.
-- Sites que usam Service Workers para fetch podem escapar parcialmente do hook de `inject.js`, já que Service Workers rodam em contexto próprio.
-- A pontuação é uma métrica autoral (pesos definidos no código), não a mesma metodologia do Blacklight — a comparação deve ser qualitativa (onde concordam/divergem e por quê), não numérica direta.
+Resultados obtidos pelo score autoral do plugin:
 
-## Licença / uso acadêmico
+| Site | Score | Classificação |
+|---|---:|---|
+| G1 | 0 | Baixa privacidade |
+| Stack Overflow | 45 | Privacidade intermediária |
+| GitHub | 84 | Boa privacidade |
 
-Projeto desenvolvido para a avaliação intermediária de Cibersegurança (Insper). Uso educacional.
+Os resultados representam as páginas, o momento e as condições específicas das
+medições. Consentimento, autenticação, conteúdo dinâmico, localização e listas
+de bloqueio podem alterar os valores em uma nova execução.
+
+## Organização das evidências
+
+Para permitir a reprodução e a correção da atividade, recomenda-se manter em
+`evidencias/`:
+
+```text
+evidencias/
+├── ddg/
+├── g1/
+├── github/   
+└── stackoverflow/
+```
+
+Cada evidência deve permitir identificar a página testada, o resultado da
+ferramenta e, quando aplicável, o popup da extensão.
+
+## Limitações conhecidas
+
+- A função de domínio-base usa uma lista fixa de sufixos comuns, como `com.br`
+  e `co.uk`, em vez de uma Public Suffix List completa.
+- Cookie sync também pode ser sinalizado pela presença de parâmetros conhecidos
+  de campanhas, como `utm_*`, `fbclid` e `gclid`; isso pode gerar falso positivo.
+- Bounce tracking depende da observação da cadeia de navegação dentro da janela
+  temporal mantida pelo background.
+- A detecção de hijacking/hook é heurística. WebSockets de terceiros, alterações
+  posteriores em objetos globais e polling repetido são indícios, não prova de
+  comprometimento.
+- Service Workers executam em contexto próprio e podem escapar parcialmente da
+  instrumentação de `inject.js`.
+- O plugin contabiliza chamadas e operações observadas; esses números não são
+  necessariamente equivalentes a valores únicos persistidos pelo navegador.
+- A classificação de privacidade depende dos pesos escolhidos para este projeto
+  e não deve ser interpretada como certificação de segurança.
+
+## Privacidade e escopo
+
+Os dados são mantidos localmente pela extensão e apresentados por aba. O projeto
+não envia os relatórios para um servidor externo. As permissões amplas são
+necessárias para observar requisições e armazenamento nas páginas avaliadas.

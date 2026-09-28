@@ -10,7 +10,14 @@ const CustomBlocklist = {
   },
 
   async add(domain) {
-    this.domains.add(domain);
+    const normalized = domain
+      .trim()
+      .toLowerCase()
+      .replace(/^https?:\/\//, "")
+      .split(/[/:]/)[0]
+      .replace(/^\.+|\.+$/g, "");
+    if (!normalized) return;
+    this.domains.add(normalized);
     await this.persist();
   },
 
